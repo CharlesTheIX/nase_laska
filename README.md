@@ -59,6 +59,30 @@ Build for different platforms, e.g., Windows on macOS:
 zig build -Dtarget=x86_64-windows
 ```
 
+### Multi-Platform Build Script
+
+For convenience, a bash script `build.sh` is provided to build the application for multiple platforms (macOS ARM64 and Windows x64) with all assets included. This script handles cross-compilation and packages the executables with templates, images, and audio files if present.
+
+To use the build script:
+
+```bash
+./build.sh
+```
+
+This will:
+
+- Build the project for macOS (native) and Windows (cross-compiled)
+- Create a `dist/` directory with subfolders for each platform
+- Copy the executable and any asset directories (`templates/`, `images/`, `audio/`) to each platform's folder
+- Skip failed builds (e.g., if macOS SDK is missing) and continue with successful ones
+
+The resulting distributables in `dist/` can be zipped and shared. For example:
+
+- `dist/macos-arm64/nase_laska` (macOS executable)
+- `dist/windows-x64/nase_laska.exe` (Windows executable)
+
+Note: The script requires Zig and may skip macOS builds if the full Xcode SDK is not installed. Windows builds should work on any supported host platform.
+
 ## Running
 
 To run the application:
