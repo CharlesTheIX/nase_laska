@@ -66,6 +66,28 @@ pub fn build(b: *std.Build) void {
         b.getInstallStep().dependOn(&templates_install.step);
     } else |_| {}
 
+    // Install images directory
+    const images_path = b.path("images");
+    if (std.fs.cwd().access(images_path.getPath(b), .{})) |_| {
+        const images_install = b.addInstallDirectory(.{
+            .install_dir = .bin,
+            .source_dir = images_path,
+            .install_subdir = "images",
+        });
+        b.getInstallStep().dependOn(&images_install.step);
+    } else |_| {}
+
+    // Install audio directory
+    const audio_path = b.path("audio");
+    if (std.fs.cwd().access(audio_path.getPath(b), .{})) |_| {
+        const audio_install = b.addInstallDirectory(.{
+            .install_dir = .bin,
+            .source_dir = audio_path,
+            .install_subdir = "audio",
+        });
+        b.getInstallStep().dependOn(&audio_install.step);
+    } else |_| {}
+
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);
     run_step.dependOn(&run_cmd.step);
