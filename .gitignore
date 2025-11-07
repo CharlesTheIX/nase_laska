@@ -1,4 +1,4 @@
-build
+dist
 .vscode
 TODO.md
 zig-out
