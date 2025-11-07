@@ -1,3 +1,5 @@
+build
 .vscode
 TODO.md
-build
+zig-out
+.zig-cache
