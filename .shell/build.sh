@@ -34,8 +34,8 @@ for i in "${!targets[@]}"; do
         cp zig-out/bin/nase_laska "dist/$platform/"
     fi
 
-    if [ -d zig-out/bin/templates ]; then
-        cp -r zig-out/bin/templates "dist/$platform/"
+    if [ -d zig-out/bin/data ]; then
+        cp -r zig-out/bin/data "dist/$platform/"
     fi
 
     if [ -d zig-out/bin/images ]; then

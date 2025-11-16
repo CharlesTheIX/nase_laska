@@ -2,7 +2,6 @@ const std = @import("std");
 const rl = @import("raylib");
 
 const Filter = enum { Any, All };
-
 const KeySet = enum { All, Dev, Action, Movement };
 
 pub const InputHandler = struct {
@@ -31,9 +30,7 @@ pub const InputHandler = struct {
         self.pressed_keys.deinit();
     }
 
-    // ------------------------------------------------------------------------
-    // METHODS
-    // ------------------------------------------------------------------------
+    // METHODS ------------------------------------------------------------------------
     pub fn getPressedActionKeys(self: *InputHandler) []rl.KeyboardKey {
         var keys = std.ArrayList(rl.KeyboardKey).initCapacity(self.allocator, 2) catch return &[_]rl.KeyboardKey{};
         defer keys.deinit(self.allocator);
@@ -45,22 +42,22 @@ pub const InputHandler = struct {
         return keys.toOwnedSlice(self.allocator) catch &[_]rl.KeyboardKey{};
     }
 
-    pub fn getPressedMovementKeys(self: *InputHandler) []rl.KeyboardKey {
-        var keys = std.ArrayList(rl.KeyboardKey).initCapacity(self.allocator, 4) catch return &[_]rl.KeyboardKey{};
+    pub fn getPressedDevKeys(self: *InputHandler) []rl.KeyboardKey {
+        var keys = std.ArrayList(rl.KeyboardKey).initCapacity(self.allocator, 2) catch return &[_]rl.KeyboardKey{};
         defer keys.deinit(self.allocator);
 
-        for (self.movement_keys) |key| {
+        for (self.dev_keys) |key| {
             if (self.pressed_keys.contains(key)) keys.append(self.allocator, key) catch {};
         }
 
         return keys.toOwnedSlice(self.allocator) catch &[_]rl.KeyboardKey{};
     }
 
-    pub fn getPressedDevKeys(self: *InputHandler) []rl.KeyboardKey {
-        var keys = std.ArrayList(rl.KeyboardKey).initCapacity(self.allocator, 2) catch return &[_]rl.KeyboardKey{};
+    pub fn getPressedMovementKeys(self: *InputHandler) []rl.KeyboardKey {
+        var keys = std.ArrayList(rl.KeyboardKey).initCapacity(self.allocator, 4) catch return &[_]rl.KeyboardKey{};
         defer keys.deinit(self.allocator);
 
-        for (self.dev_keys) |key| {
+        for (self.movement_keys) |key| {
             if (self.pressed_keys.contains(key)) keys.append(self.allocator, key) catch {};
         }
 
@@ -82,7 +79,7 @@ pub const InputHandler = struct {
     pub fn update(self: *InputHandler) void {
         self.pressed_keys.clearRetainingCapacity();
         for (self.dev_keys) |key| {
-            if (rl.isKeyDown(key)) self.pressed_keys.put(key, {}) catch {};
+            if (rl.isKeyPressed(key)) self.pressed_keys.put(key, {}) catch {};
         }
 
         for (self.movement_keys) |key| {
@@ -90,7 +87,7 @@ pub const InputHandler = struct {
         }
 
         for (self.action_keys) |key| {
-            if (rl.isKeyDown(key)) self.pressed_keys.put(key, {}) catch {};
+            if (rl.isKeyPressed(key)) self.pressed_keys.put(key, {}) catch {};
         }
     }
 };

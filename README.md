@@ -1,4 +1,4 @@
-# Nase Laska
+# Náše Láska
 
 A simple game built with Zig and Raylib, featuring persistent timer tracking and save/load functionality.
 
@@ -61,7 +61,7 @@ zig build -Dtarget=x86_64-windows
 
 ### Multi-Platform Build Script
 
-For convenience, a bash script `build.sh` is provided to build the application for multiple platforms (macOS ARM64 and Windows x64) with all assets included. This script handles cross-compilation and packages the executables with templates, images, and audio files if present.
+For convenience, a bash script `build.sh` is provided to build the application for multiple platforms (macOS ARM64 and Windows x64) with all assets included. This script handles cross-compilation and packages the executables with data, images, and audio files if present.
 
 To use the build script:
 
@@ -73,7 +73,7 @@ This will:
 
 - Build the project for macOS (native) and Windows (cross-compiled)
 - Create a `dist/` directory with subfolders for each platform
-- Copy the executable and any asset directories (`templates/`, `images/`, `audio/`) to each platform's folder
+- Copy the executable and any asset directories (`data/`, `images/`, `audio/`) to each platform's folder
 - Skip failed builds (e.g., if macOS SDK is missing) and continue with successful ones
 
 The resulting distributables in `dist/` can be zipped and shared. For example:
@@ -113,7 +113,7 @@ src/
     ├── storage.zig       # JSON save/load system
     ├── input.zig         # Input handling
     └── timer.zig         # Timer implementation
-templates/
+data/
 ├── user.json             # Default user save template
 └── world.json            # Default world save template
 build.zig                 # Build configuration
@@ -131,7 +131,7 @@ Game data is saved to `~/.nase_laska/`:
 - `user.json`: Contains player name and game time in nanoseconds
 - `world.json`: Reserved for future world/level data
 
-Default templates are provided in the `templates/` directory.
+Default templates are provided in the `data/` directory.
 
 ## Usage
 

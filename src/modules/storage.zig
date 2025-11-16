@@ -2,29 +2,17 @@ const json = std.json;
 const std = @import("std");
 
 pub const Data = union(DataType) { user: UserData, world: WorldData };
-
 pub const DataType = enum { user, world };
-
-pub const UserData = struct { name: [:0]const u8, game_time: u64 };
-
+pub const UserData = struct { name: [:0]const u8, game_time: i64 };
 pub const WorldData = struct { level: u32, score: u32 };
 
 pub const StorageManager = struct {
+    allocator: std.mem.Allocator,
+    data_allocator: std.mem.Allocator,
     exe_dir: []const u8,
     save_dir: []const u8,
     user_data: ?UserData = null,
     world_data: ?WorldData = null,
-    data_allocator: std.mem.Allocator,
-
-    const user = "X";
-    const _user = "user.json";
-
-    pub fn deinit(self: *StorageManager) void {
-        if (self.user_data) |ud| self.data_allocator.free(@constCast(ud.name));
-        self.user_data = null;
-        self.world_data = null;
-        //NOTE: exe_dir and save_dir are freed by the parent allocator when StorageManager is destroyed
-    }
 
     pub fn init(parent_allocator: std.mem.Allocator) !StorageManager {
         const cwd = ".";
@@ -50,28 +38,20 @@ pub const StorageManager = struct {
             .exe_dir = exe_dir_dup,
             .save_dir = save_dir_dup,
             .data_allocator = parent_allocator,
+            .allocator = parent_allocator,
         };
     }
 
-    // ------------------------------------------------------------------------
-    // METHODS
-    // ------------------------------------------------------------------------
-    fn dataToString(data: Data, allocator: std.mem.Allocator) ![]const u8 {
-        return switch (data) {
-            .user => |user_data| std.fmt.allocPrint(
-                allocator,
-                "{{\"name\": \"{s}\", \"game_time\": {d}}}",
-                .{ user_data.name, user_data.game_time },
-            ),
-            .world => |world_data| std.fmt.allocPrint(
-                allocator,
-                "{{\"level\": {d}, \"score\": {d}}}",
-                .{ world_data.level, world_data.score },
-            ),
-        };
+    pub fn deinit(self: *StorageManager) void {
+        if (self.user_data) |ud| self.data_allocator.free(@constCast(ud.name));
+        self.user_data = null;
+        self.world_data = null;
+        self.allocator.free(self.exe_dir);
+        self.allocator.free(self.save_dir);
     }
 
-    pub fn getInt(self: *StorageManager, data_type: DataType, field: []const u8) ?u64 {
+    // METHODS ------------------------------------------------------------------------
+    pub fn getInt(self: *StorageManager, data_type: DataType, field: []const u8) ?i64 {
         std.debug.print("getInt called for field: {s}\n", .{field});
         const data = self.load(data_type, switch (data_type) {
             .user => "user.json",
@@ -82,7 +62,7 @@ pub const StorageManager = struct {
         };
         const result = switch (data) {
             .user => |u| if (std.mem.eql(u8, field, "game_time")) u.game_time else null,
-            .world => |w| if (std.mem.eql(u8, field, "level")) @as(u64, w.level) else if (std.mem.eql(u8, field, "score")) @as(u64, w.score) else null,
+            .world => |w| if (std.mem.eql(u8, field, "level")) @as(i64, w.level) else if (std.mem.eql(u8, field, "score")) @as(i64, w.score) else null,
         };
         std.debug.print("getInt returning: {any}\n", .{result});
         return result;
@@ -95,7 +75,7 @@ pub const StorageManager = struct {
         }) catch return null;
         return switch (data) {
             .user => |u| if (std.mem.eql(u8, field, "name")) u.name else null,
-            .world => null,
+            else => null,
         };
     }
 
@@ -104,8 +84,8 @@ pub const StorageManager = struct {
             .user => {
                 if (self.user_data) |data| return Data{ .user = data };
 
-                const full_path = try std.fs.path.join(std.heap.c_allocator, &[_][]const u8{ self.save_dir, filename });
-                defer std.heap.c_allocator.free(full_path);
+                const full_path = try std.fs.path.join(self.allocator, &[_][]const u8{ self.save_dir, filename });
+                defer self.allocator.free(@constCast(full_path));
                 const file_exists = if (std.fs.openFileAbsolute(full_path, .{})) |f| blk: {
                     f.close();
                     break :blk true;
@@ -124,7 +104,7 @@ pub const StorageManager = struct {
 
                 const content = try file.readToEndAlloc(self.data_allocator, 1024 * 1024);
                 const parsed = try stringToData(.user, content, self.data_allocator);
-                defer self.data_allocator.free(content);
+                defer self.data_allocator.free(@constCast(content));
                 self.user_data = parsed.user;
 
                 return parsed;
@@ -132,8 +112,8 @@ pub const StorageManager = struct {
             .world => {
                 if (self.world_data) |data| return Data{ .world = data };
 
-                const full_path = try std.fs.path.join(std.heap.c_allocator, &[_][]const u8{ self.save_dir, filename });
-                defer std.heap.c_allocator.free(full_path);
+                const full_path = try std.fs.path.join(self.allocator, &[_][]const u8{ self.save_dir, filename });
+                defer self.allocator.free(@constCast(full_path));
                 const file_exists = if (std.fs.openFileAbsolute(full_path, .{})) |f| blk: {
                     f.close();
                     break :blk true;
@@ -152,7 +132,7 @@ pub const StorageManager = struct {
 
                 const content = try file.readToEndAlloc(self.data_allocator, 1024 * 1024);
                 const parsed = try stringToData(.world, content, self.data_allocator);
-                defer self.data_allocator.free(content);
+                defer self.data_allocator.free(@constCast(content));
                 self.world_data = parsed.world;
 
                 return parsed;
@@ -162,23 +142,22 @@ pub const StorageManager = struct {
 
     fn loadTemplateData(self: *StorageManager, data_type: DataType, filename: []const u8) !Data {
         const full_path = blk: {
-            const templates_dir_name = "templates";
-            const templates_dir = try std.fs.path.join(std.heap.c_allocator, &[_][]const u8{
+            const data_dir_name = "data";
+            const data_dir = try std.fs.path.join(self.allocator, &[_][]const u8{
                 self.exe_dir,
-                templates_dir_name,
+                data_dir_name,
             });
-            defer std.heap.c_allocator.free(templates_dir);
-
-            break :blk try std.fs.path.join(std.heap.c_allocator, &[_][]const u8{ templates_dir, filename });
+            defer self.allocator.free(@constCast(data_dir));
+            break :blk try std.fs.path.join(self.allocator, &[_][]const u8{ data_dir, filename });
         };
-        defer std.heap.c_allocator.free(full_path);
+        defer self.allocator.free(@constCast(full_path));
 
         const file = try std.fs.openFileAbsolute(full_path, .{});
         defer file.close();
 
         const content = try file.readToEndAlloc(self.data_allocator, 1024 * 1024);
         const result = try stringToData(data_type, content, self.data_allocator);
-        defer self.data_allocator.free(content);
+        defer self.data_allocator.free(@constCast(content));
 
         return result;
     }
@@ -193,28 +172,44 @@ pub const StorageManager = struct {
             },
         }
 
-        const full_path = try std.fs.path.join(std.heap.c_allocator, &[_][]const u8{ self.save_dir, filename });
+        const full_path = try std.fs.path.join(self.allocator, &[_][]const u8{ self.save_dir, filename });
         const file = try std.fs.createFileAbsolute(full_path, .{});
         defer file.close();
-        defer std.heap.c_allocator.free(full_path);
+        defer self.allocator.free(@constCast(full_path));
 
-        const content = try dataToString(data, std.heap.c_allocator);
+        const content = try dataToString(data, self.allocator);
         try file.writeAll(content);
-        std.heap.c_allocator.free(content);
+        self.allocator.free(@constCast(content));
+    }
+
+    // UTILS ------------------------------------------------------------------------
+    fn dataToString(data: Data, allocator: std.mem.Allocator) ![]const u8 {
+        return switch (data) {
+            .user => |ud| std.fmt.allocPrint(
+                allocator,
+                "{{\"name\":\"{s}\",\"game_time\":{d}}}",
+                .{ std.mem.span(@as([*:0]const u8, @ptrCast(ud.name))), ud.game_time },
+            ),
+            .world => |wd| std.fmt.allocPrint(
+                allocator,
+                "{{\"level\":{d},\"score\":{d}}}",
+                .{ wd.level, wd.score },
+            ),
+        };
     }
 
     fn stringToData(data_type: DataType, json_str: []const u8, allocator: std.mem.Allocator) !Data {
         switch (data_type) {
             .user => {
-                var parsed = try json.parseFromSlice(UserData, allocator, json_str, .{});
+                var parsed = try json.parseFromSlice(struct { name: []const u8, game_time: i64 }, allocator, json_str, .{});
                 defer parsed.deinit();
                 const name = try allocator.dupeZ(u8, parsed.value.name);
                 return Data{ .user = .{ .name = name, .game_time = parsed.value.game_time } };
             },
             .world => {
-                var parsed = try json.parseFromSlice(WorldData, allocator, json_str, .{});
+                var parsed = try json.parseFromSlice(struct { level: u32, score: u32 }, allocator, json_str, .{});
                 defer parsed.deinit();
-                return Data{ .world = parsed.value };
+                return Data{ .world = .{ .level = parsed.value.level, .score = parsed.value.score } };
             },
         }
     }

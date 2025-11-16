@@ -4,11 +4,13 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // Dependencies
     const raylib_dep = b.dependency("raylib_zig", .{ .target = target, .optimize = optimize });
     const raylib = raylib_dep.module("raylib");
     const raygui = raylib_dep.module("raygui");
     const raylib_artifact = raylib_dep.artifact("raylib");
 
+    // Modules
     const storage_mod = b.addModule("storage", .{
         .target = target,
         .root_source_file = b.path("src/modules/storage.zig"),
@@ -36,6 +38,7 @@ pub fn build(b: *std.Build) void {
         },
     });
 
+    // Executable
     const exe = b.addExecutable(.{
         .name = "nase_laska",
         .root_module = b.createModule(.{
@@ -55,18 +58,17 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addImport("raygui", raygui);
     b.installArtifact(exe);
 
-    // Install templates directory
-    const templates_path = b.path("templates");
-    if (std.fs.cwd().access(templates_path.getPath(b), .{})) |_| {
-        const templates_install = b.addInstallDirectory(.{
+    // Assets
+    const data_path = b.path("data");
+    if (std.fs.cwd().access(data_path.getPath(b), .{})) |_| {
+        const data_install = b.addInstallDirectory(.{
             .install_dir = .bin,
-            .source_dir = templates_path,
-            .install_subdir = "templates",
+            .source_dir = data_path,
+            .install_subdir = "data",
         });
-        b.getInstallStep().dependOn(&templates_install.step);
+        b.getInstallStep().dependOn(&data_install.step);
     } else |_| {}
 
-    // Install images directory
     const images_path = b.path("images");
     if (std.fs.cwd().access(images_path.getPath(b), .{})) |_| {
         const images_install = b.addInstallDirectory(.{
@@ -77,7 +79,6 @@ pub fn build(b: *std.Build) void {
         b.getInstallStep().dependOn(&images_install.step);
     } else |_| {}
 
-    // Install audio directory
     const audio_path = b.path("audio");
     if (std.fs.cwd().access(audio_path.getPath(b), .{})) |_| {
         const audio_install = b.addInstallDirectory(.{
@@ -88,10 +89,11 @@ pub fn build(b: *std.Build) void {
         b.getInstallStep().dependOn(&audio_install.step);
     } else |_| {}
 
+    // Run
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);
     run_step.dependOn(&run_cmd.step);
     run_cmd.step.dependOn(b.getInstallStep());
-
+    run_cmd.cwd = b.path(".");
     if (b.args) |args| run_cmd.addArgs(args);
 }

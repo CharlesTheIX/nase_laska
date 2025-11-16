@@ -2,13 +2,13 @@ const std = @import("std");
 const rl = @import("raylib");
 const timer_mod = @import("timer");
 const input_mod = @import("input");
-const storage_manager_mod = @import("storage");
+const storage_mod = @import("storage");
 
 pub fn drawText(text: [:0]const u8, posX: i32, posY: i32, fontSize: i32, color: rl.Color) void {
     rl.drawText(text, posX, posY, fontSize, color);
 }
 
-pub fn drawDev(storage: *storage_manager_mod.StorageManager, input_handler: *input_mod.InputHandler, timer: *timer_mod.Timer) void {
+pub fn drawDev(storage: *storage_mod.StorageManager, input_handler: *input_mod.InputHandler, timer: *timer_mod.Timer) void {
     const name = storage.getString(.user, "name") orelse "Guest";
     drawText(name, 100, 100, 20, rl.Color.black);
 
