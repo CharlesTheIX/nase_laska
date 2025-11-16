@@ -1,11 +1,23 @@
-const std = @import("std");
-const rl = @import("raylib");
-const timer_mod = @import("timer");
 const input_mod = @import("input");
+const rl = @import("raylib");
+const std = @import("std");
 const storage_mod = @import("storage");
+const timer_mod = @import("timer");
 
 pub fn drawText(text: [:0]const u8, posX: i32, posY: i32, fontSize: i32, color: rl.Color) void {
     rl.drawText(text, posX, posY, fontSize, color);
+}
+
+pub fn drawRectangle(posX: i32, posY: i32, width: i32, height: i32, color: rl.Color) void {
+    rl.drawRectangle(posX, posY, width, height, color);
+}
+
+pub fn drawRectangleRec(rec: rl.Rectangle, color: rl.Color) void {
+    rl.drawRectangleRec(rec, color);
+}
+
+pub fn drawRectangleV(v: rl.Vector2, size: rl.Vector2, color: rl.Color) void {
+    rl.drawRectangleV(v, size, color);
 }
 
 pub fn drawDev(storage: *storage_mod.StorageManager, input_handler: *input_mod.InputHandler, timer: *timer_mod.Timer) void {

@@ -12,7 +12,7 @@ pub const InputHandler = struct {
     pressed_keys: std.AutoHashMap(rl.KeyboardKey, void),
 
     pub fn init(allocator: std.mem.Allocator) !InputHandler {
-        const dev_keys = &[_]rl.KeyboardKey{.z};
+        const dev_keys = &[_]rl.KeyboardKey{ .z, .x, .c, .v };
         const action_keys = &[_]rl.KeyboardKey{ .space, .enter };
         const movement_keys = &[_]rl.KeyboardKey{ .w, .a, .s, .d };
         const pressed_keys = std.AutoHashMap(rl.KeyboardKey, void).init(allocator);

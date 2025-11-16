@@ -4,7 +4,7 @@ const std = @import("std");
 pub const Data = union(DataType) { user: UserData, world: WorldData };
 pub const DataType = enum { user, world };
 pub const UserData = struct { name: [:0]const u8, game_time: i64 };
-pub const WorldData = struct { level: u32, score: u32 };
+pub const WorldData = struct { level: [:0]const u8, score: u32 };
 
 pub const StorageManager = struct {
     allocator: std.mem.Allocator,
@@ -62,7 +62,7 @@ pub const StorageManager = struct {
         };
         const result = switch (data) {
             .user => |u| if (std.mem.eql(u8, field, "game_time")) u.game_time else null,
-            .world => |w| if (std.mem.eql(u8, field, "level")) @as(i64, w.level) else if (std.mem.eql(u8, field, "score")) @as(i64, w.score) else null,
+            .world => |w| if (std.mem.eql(u8, field, "score")) @as(i64, w.score) else null,
         };
         std.debug.print("getInt returning: {any}\n", .{result});
         return result;
@@ -192,7 +192,7 @@ pub const StorageManager = struct {
             ),
             .world => |wd| std.fmt.allocPrint(
                 allocator,
-                "{{\"level\":{d},\"score\":{d}}}",
+                "{{\"level\":{s},\"score\":{d}}}",
                 .{ wd.level, wd.score },
             ),
         };
@@ -207,9 +207,10 @@ pub const StorageManager = struct {
                 return Data{ .user = .{ .name = name, .game_time = parsed.value.game_time } };
             },
             .world => {
-                var parsed = try json.parseFromSlice(struct { level: u32, score: u32 }, allocator, json_str, .{});
+                var parsed = try json.parseFromSlice(struct { level: []const u8, score: u32 }, allocator, json_str, .{});
                 defer parsed.deinit();
-                return Data{ .world = .{ .level = parsed.value.level, .score = parsed.value.score } };
+                const level = try allocator.dupeZ(u8, parsed.value.level);
+                return Data{ .world = .{ .level = level, .score = parsed.value.score } };
             },
         }
     }
